@@ -32,8 +32,13 @@
                 <a href="/faq" class="px-8">faq</a>
             </div>
             <div>
-                <a href="/login" class="px-8">login</a>
-                <a href="/signup" class="px-8">signup</a>
+                {{ if currentUser }}
+                    <a href="/logout" class="px-8">logout</a>
+                    <a href="/profile" class="px-8">{{ currentUser.Email }}</a>
+                {{ else }}
+                    <a href="/login" class="px-8">login</a>
+                    <a href="/signup" class="px-8">signup</a>
+                {{ end }}
             </div>
         </nav>
     </header>

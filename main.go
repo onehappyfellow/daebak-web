@@ -33,6 +33,9 @@ func main() {
 	}
 
 	// middleware
+	userMiddleware := controllers.UserMiddleware{
+		SessionService: sessionService,
+	}
 
 	// controllers
 	userController := controllers.Users{
@@ -45,10 +48,14 @@ func main() {
 	userController.Templates.Signin = views.Must(views.ParseFS(
 		templates.FS, "layout.gohtml", "signin.gohtml",
 	))
+	userController.Templates.Profile = views.Must(views.ParseFS(
+		templates.FS, "layout.gohtml", "profile.gohtml",
+	))
 
 	// setup router
 	r := chi.NewRouter()
 	r.Use(middleware.StripSlashes)
+	r.Use(userMiddleware.SetUser)
 
 	// Routes
 	r.Get("/", controllers.StaticHandler(
@@ -62,7 +69,13 @@ func main() {
 	r.Get("/login", userController.Signin)
 	r.Post("/login", userController.HandleSignin)
 	r.Get("/logout", userController.Logout)
-	r.Get("/users/me", userController.CurrentUser) // TODO replace this
+
+	// Restricted Routes
+	r.Route("/profile", func(r chi.Router) {
+		r.Use(userMiddleware.RequireUser)
+		r.Get("/", userController.Profile)
+	})
+
 	r.NotFound(notFoundHandler)
 
 	fmt.Println("Starting server on port 3000")

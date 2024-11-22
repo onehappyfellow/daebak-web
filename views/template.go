@@ -5,6 +5,9 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+
+	"github.com/onehappyfellow/daebak-web/context"
+	"github.com/onehappyfellow/daebak-web/models"
 )
 
 func Must(t Template, err error) Template {
@@ -15,7 +18,15 @@ func Must(t Template, err error) Template {
 }
 
 func ParseFS(fs fs.FS, patterns ...string) (Template, error) {
-	tpl, err := template.ParseFS(fs, patterns...)
+	tpl := template.New(patterns[0])
+	tpl = tpl.Funcs(
+		template.FuncMap{
+			"currentUser": func() template.HTML {
+				return ``
+			},
+		},
+	)
+	tpl, err := tpl.ParseFS(fs, patterns...)
 	if err != nil {
 		return Template{}, fmt.Errorf("parsing template: %w", err)
 	}
@@ -29,8 +40,21 @@ type Template struct {
 }
 
 func (t Template) Execute(w http.ResponseWriter, r *http.Request, data any, errs ...error) {
+	tpl, err := t.htmlTemplate.Clone()
+	if err != nil {
+		fmt.Printf("error executing template: %v", err)
+		http.Error(w, "Sorry, something went wrong", http.StatusInternalServerError)
+		return
+	}
+	tpl = tpl.Funcs(
+		template.FuncMap{
+			"currentUser": func() *models.User {
+				return context.User(r.Context())
+			},
+		},
+	)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	err := t.htmlTemplate.Execute(w, data)
+	err = tpl.Execute(w, data)
 	if err != nil {
 		fmt.Printf("error executing template: %v", err)
 		http.Error(w, "Sorry, something went wrong", http.StatusInternalServerError)

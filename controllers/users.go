@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/onehappyfellow/daebak-web/context"
 	"github.com/onehappyfellow/daebak-web/models"
 )
 
 type Users struct {
 	Templates struct {
-		Signup Template
-		Signin Template
+		Signup  Template
+		Signin  Template
+		Profile Template
 	}
 	UserService    *models.UserService
 	SessionService *models.SessionService
@@ -82,17 +84,44 @@ func (u Users) Logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-func (u Users) CurrentUser(w http.ResponseWriter, r *http.Request) {
-	c, err := r.Cookie(CookieSession)
-	if err != nil {
-		fmt.Println("The cookie could not be read")
-		http.Redirect(w, r, "/login", http.StatusFound)
-		return
+func (u Users) Profile(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		User *models.User
 	}
-	user, err := u.SessionService.User(c.Value)
-	if err != nil {
-		fmt.Println(err)
-		http.Redirect(w, r, "/login", http.StatusFound)
-	}
-	fmt.Fprintf(w, "User: %v\n", user)
+	data.User = context.User(r.Context())
+	u.Templates.Profile.Execute(w, r, data)
+}
+
+type UserMiddleware struct {
+	SessionService *models.SessionService
+}
+
+func (mw UserMiddleware) SetUser(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie(CookieSession)
+		if err != nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+		user, err := mw.SessionService.User(cookie.Value)
+		if err != nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+		ctx := r.Context()
+		ctx = context.WithUser(ctx, user)
+		r = r.WithContext(ctx)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (mw UserMiddleware) RequireUser(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := context.User(r.Context())
+		if user == nil {
+			http.Redirect(w, r, "/login", http.StatusFound)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
