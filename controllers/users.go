@@ -10,12 +10,15 @@ import (
 
 type Users struct {
 	Templates struct {
-		Signup  Template
-		Signin  Template
-		Profile Template
+		Signup         Template
+		Signin         Template
+		Profile        Template
+		ForgotPassword Template
+		ResetPassword  Template
 	}
-	UserService    *models.UserService
-	SessionService *models.SessionService
+	UserService          *models.UserService
+	SessionService       *models.SessionService
+	PasswordResetService *models.PasswordResetService
 }
 
 func (u Users) Signup(w http.ResponseWriter, r *http.Request) {
@@ -90,6 +93,58 @@ func (u Users) Profile(w http.ResponseWriter, r *http.Request) {
 	}
 	data.User = context.User(r.Context())
 	u.Templates.Profile.Execute(w, r, data)
+}
+
+func (u Users) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	u.Templates.ForgotPassword.Execute(w, r, nil)
+}
+
+func (u Users) HandleForgotPassword(w http.ResponseWriter, r *http.Request) {
+	email := r.FormValue("email")
+	reset, err := u.PasswordResetService.Create(email)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	link := fmt.Sprintf("http://localhost:3000/reset-password?token=%s", reset.Token)
+	fmt.Println(link)
+	// TODO send token via email
+	// TODO inform user with success toast
+	http.Redirect(w, r, "/reset-password", http.StatusFound)
+}
+
+func (u Users) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Token string
+	}
+	data.Token = r.FormValue("token")
+	u.Templates.ResetPassword.Execute(w, r, data)
+}
+
+func (u Users) HandleResetPassword(w http.ResponseWriter, r *http.Request) {
+	token := r.FormValue("token")
+	password := r.FormValue("password")
+	user, err := u.PasswordResetService.Consume(token)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "Something went wrong.", http.StatusInternalServerError)
+		return
+	}
+	err = u.UserService.UpdatePassword(user, password)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "Something went wrong.", http.StatusInternalServerError)
+		return
+	}
+
+	session, err := u.SessionService.Create(user.ID)
+	if err != nil {
+		fmt.Println(err)
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+	SetCookie(w, CookieSession, session.Token)
+	http.Redirect(w, r, "/profile", http.StatusFound)
 }
 
 type UserMiddleware struct {

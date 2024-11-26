@@ -21,8 +21,8 @@ func ParseFS(fs fs.FS, patterns ...string) (Template, error) {
 	tpl := template.New(patterns[0])
 	tpl = tpl.Funcs(
 		template.FuncMap{
-			"currentUser": func() template.HTML {
-				return ``
+			"currentUser": func() *models.User {
+				return nil
 			},
 		},
 	)
