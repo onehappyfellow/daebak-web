@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -14,6 +15,11 @@ import (
 const (
 	ResetDuration = 10 * time.Minute
 	BytesPerToken = 8
+)
+
+var (
+	ErrTokenInvalid = errors.New("password_reset: token is invalid")
+	ErrTokenExpired = errors.New("password_reset: token is expired")
 )
 
 type PasswordReset struct {
@@ -78,18 +84,18 @@ func (s *PasswordResetService) Consume(token string) (*User, error) {
 	`, s.hash(token))
 	err := row.Scan(&user.ID, &user.Email, &expiresAt)
 	if err != nil {
-		return nil, fmt.Errorf("consume: %w", err)
+		return nil, ErrTokenInvalid
 	}
 	if time.Now().After(expiresAt) {
-		// TODO error toast
-		return nil, fmt.Errorf("token is expired")
+		return nil, ErrTokenExpired
 	}
-	_, err = s.DB.Exec(`
-		DELETE FROM password_resets WHERE user_id = $1;
-	`, user.ID)
-	if err != nil {
-		fmt.Println(err)
-	}
+	fmt.Println("CONSUME CONTINUED")
+	// _, err = s.DB.Exec(`
+	// 	DELETE FROM password_resets WHERE user_id = $1;
+	// `, user.ID)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
 	return &user, nil
 }
 

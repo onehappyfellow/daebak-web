@@ -1,6 +1,7 @@
 package views
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -22,6 +23,9 @@ func ParseFS(fs fs.FS, patterns ...string) (Template, error) {
 	tpl = tpl.Funcs(
 		template.FuncMap{
 			"currentUser": func() *models.User {
+				return nil
+			},
+			"toastMessages": func() []Toast {
 				return nil
 			},
 		},
@@ -51,6 +55,24 @@ func (t Template) Execute(w http.ResponseWriter, r *http.Request, data any, errs
 			"currentUser": func() *models.User {
 				return context.User(r.Context())
 			},
+			"toastMessages": func() []Toast {
+				var toasts []Toast
+				for _, err := range errs {
+					var pubErr public
+					if errors.As(err, &pubErr) {
+						toasts = append(toasts, Toast{
+							Text: pubErr.Public(),
+							Type: "error",
+						})
+					} else {
+						toasts = append(toasts, Toast{
+							Text: "Something went wrong.",
+							Type: "error",
+						})
+					}
+				}
+				return toasts
+			},
 		},
 	)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -59,4 +81,13 @@ func (t Template) Execute(w http.ResponseWriter, r *http.Request, data any, errs
 		fmt.Printf("error executing template: %v", err)
 		http.Error(w, "Sorry, something went wrong", http.StatusInternalServerError)
 	}
+}
+
+type public interface {
+	Public() string
+}
+
+type Toast struct {
+	Text string
+	Type string
 }

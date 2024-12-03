@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/onehappyfellow/daebak-web/context"
+	"github.com/onehappyfellow/daebak-web/errors"
 	"github.com/onehappyfellow/daebak-web/models"
 )
 
@@ -34,7 +35,14 @@ func (u Users) HandleSignup(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 	user, err := u.UserService.Create(email, password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		if errors.Is(err, models.ErrEmailTaken) {
+			err = errors.Public(err, "That email is already associated with an account.")
+		}
+		if errors.Is(err, models.ErrPasswordInsecure) {
+			err = errors.Public(err, fmt.Sprintf("Your password must be at least %d characters long.", models.MinPasswordLength))
+		}
+		data := struct{ Email string }{Email: email}
+		u.Templates.Signup.Execute(w, r, data, err)
 		return
 	}
 	session, err := u.SessionService.Create(user.ID)
@@ -60,7 +68,11 @@ func (u Users) HandleSignin(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 	user, err := u.UserService.Authenticate(email, password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		if errors.Is(err, models.ErrInvalidAuth) {
+			err = errors.Public(err, "That email or password is incorrect.")
+		}
+		data := struct{ Email string }{Email: email}
+		u.Templates.Signin.Execute(w, r, data, err)
 		return
 	}
 	session, err := u.SessionService.Create(user.ID)
@@ -109,8 +121,9 @@ func (u Users) HandleForgotPassword(w http.ResponseWriter, r *http.Request) {
 	link := fmt.Sprintf("http://localhost:3000/reset-password?token=%s", reset.Token)
 	fmt.Println(link)
 	// TODO send token via email
-	// TODO inform user with success toast
-	http.Redirect(w, r, "/reset-password", http.StatusFound)
+	msg := fmt.Sprintf("A password reset token has been sent to %s.", email)
+	// TODO don't do this as an error
+	u.Templates.ResetPassword.Execute(w, r, nil, errors.Public(fmt.Errorf("success"), msg))
 }
 
 func (u Users) ResetPassword(w http.ResponseWriter, r *http.Request) {
@@ -126,14 +139,24 @@ func (u Users) HandleResetPassword(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 	user, err := u.PasswordResetService.Consume(token)
 	if err != nil {
-		fmt.Println(err)
-		http.Error(w, "Something went wrong.", http.StatusInternalServerError)
+		if errors.Is(err, models.ErrTokenInvalid) {
+			err = errors.Public(err, "The password reset token is invalid.")
+		}
+		if errors.Is(err, models.ErrTokenExpired) {
+			err = errors.Public(err, "The password reset token is expired.")
+		}
+		u.Templates.ResetPassword.Execute(w, r, nil, err)
 		return
 	}
 	err = u.UserService.UpdatePassword(user, password)
 	if err != nil {
-		fmt.Println(err)
-		http.Error(w, "Something went wrong.", http.StatusInternalServerError)
+		// bug: by this point consume succeeded so the token is no longer valid
+		if errors.Is(err, models.ErrPasswordInsecure) {
+			err = errors.Public(err, fmt.Sprintf("Your password must be at least %d characters long.", models.MinPasswordLength))
+		}
+
+		data := struct{ Token string }{Token: token}
+		u.Templates.ResetPassword.Execute(w, r, data, err)
 		return
 	}
 
@@ -174,6 +197,7 @@ func (mw UserMiddleware) RequireUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := context.User(r.Context())
 		if user == nil {
+			// TOAST ERROR You must be logged in to access that page
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
 		}

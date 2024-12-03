@@ -20,7 +20,7 @@ At some point, I will add unit and/or integration tests, but for now this checkl
 - fail create (same email)
 
 ## TODO
-- error toasts
+- redirect after login
 - csrf protection
 - password reset email
 - account creation confirmation email
