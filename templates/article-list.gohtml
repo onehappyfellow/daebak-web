@@ -1,0 +1,8 @@
+{{define "page"}}
+    <h1>{{ .Title }}</h1>
+    {{ range .Articles }}
+        <div class="art">
+            {{ .Headline }}
+        </div>
+    {{ end }}
+{{end}}
