@@ -43,6 +43,12 @@ func main() {
 	// setup router
 	r := chi.NewRouter()
 	r.Use(middleware.StripSlashes)
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	// r.Use(middleware.Logger)
+	// r.Use(middleware.URLFormat)
+	// r.Use(middleware.Recoverer)
+	// r.Use(middleware.Timeout(60 * time.Second))
 	r.NotFound(notFoundHandler)
 
 	// Routes
@@ -52,7 +58,18 @@ func main() {
 	r.Get("/contact", controllers.StaticHandler(
 		views.Must(views.ParseFS(templates.FS, "layout.gohtml", "contact.gohtml")),
 	))
-	r.Get("/a", articleController.Single)
+
+	// r.With(articleController.SingleCtx).Get("/a/{articleSlug:[a-z-]+}", articleController.Single)
+	// r.Get("/a/{articleSlug:[a-z-]+}", articleController.Single)
+
+	r.Route("/a/{articleID}", func(r chi.Router) {
+		r.Use(controllers.ArticleCtx)        // Load the *Article on the request context
+		r.Get("/", articleController.Single) // GET /a/123
+	})
+
+	r.With(controllers.ArticleCtx).Get("/a/{articleSlug:[a-z-]+}", articleController.Single)
+	// GET /a/whats-up
+
 	r.Get("/trending", articleController.Trending)
 
 	fmt.Println("Starting server on port 3000")
