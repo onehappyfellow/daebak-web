@@ -1,0 +1,56 @@
+{{define "page"}}
+    <h1>{{ if not .Content }}Create{{ else }}Edit{{ end }} an Article</h1>
+    <form method="POST" action="/articles{{ if .ID }}/{{ .ID }}{{ end }}">
+        <div>
+            <label for="headline">Headline:</label>
+            <input 
+            type="text" 
+            id="headline" 
+            name="headline" 
+            value="{{ if .Headline }}{{ .Headline }}{{ end }}"
+            required
+            >
+        </div>
+        <div>
+            <label for="content">Content:</label>
+            <textarea 
+            id="content" 
+            name="content" 
+            rows="10" 
+            required
+            >{{ if .Content }}{{ .Content }}{{ end }}</textarea>
+        </div>
+        <div>
+            <label for="date">Date:</label>
+            <input 
+            type="date" 
+            id="date" 
+            name="date" 
+            value="{{ if .Date }}{{ .Date.Format "2006-01-02" }}{{ end }}"
+            required
+            >
+        </div>
+        <div>
+            <label for="published">Published:</label>
+            <input 
+            type="checkbox" 
+            id="published" 
+            name="published"
+            {{ if .Published }}checked{{ end }}
+            >
+        </div>
+        <div>
+            <label for="author">Author:</label>
+            <input 
+            type="text" 
+            id="author" 
+            name="author" 
+            value="{{ if .Author }}{{ .Author }}{{ end }}"
+            required
+            >
+        </div>
+        <button type="submit">
+            {{ if .ID }}Update{{ else }}Create{{ end }}
+        </button>
+    </form>
+{{end}}

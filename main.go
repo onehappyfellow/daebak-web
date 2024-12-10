@@ -42,6 +42,9 @@ func main() {
 	articlesHtml.Templates.List = views.Must(views.ParseFS(
 		templates.FS, "layout.gohtml", "article-list.gohtml",
 	))
+	articlesHtml.Templates.Form = views.Must(views.ParseFS(
+		templates.FS, "layout.gohtml", "article-form.gohtml",
+	))
 
 	// setup router
 	r := chi.NewRouter()
@@ -59,6 +62,8 @@ func main() {
 		views.Must(views.ParseFS(templates.FS, "layout.gohtml", "home.gohtml")),
 	))
 	r.Get("/a/{slug}", articlesHtml.Single)
+	r.Get("/articles/new", articlesHtml.CreateArticle)
+	r.Post("/articles", articlesHtml.CreateArticle)
 	r.Get("/trending", articlesHtml.Trending)
 	r.Mount("/api/articles", apiRoutes(articlesJson))
 
