@@ -30,6 +30,22 @@ func (c ArticlesHtml) Single(w http.ResponseWriter, r *http.Request) {
 	c.Templates.Single.Execute(w, r, article)
 }
 
+func (c ArticlesHtml) Home(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Title    string
+		Articles []models.Article
+	}
+	page, err := c.ArticleService.GetAllArticles(1, 10)
+	if err != nil {
+		data.Articles = []models.Article{}
+	} else {
+		data.Articles = page.Articles
+	}
+
+	data.Title = "Home"
+	c.Templates.List.Execute(w, r, data)
+}
+
 func (c ArticlesHtml) Trending(w http.ResponseWriter, r *http.Request) {
 
 	page, err := c.ArticleService.GetAllArticles(1, 10)

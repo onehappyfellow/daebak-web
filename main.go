@@ -57,21 +57,28 @@ func main() {
 	// r.Use(middleware.Timeout(60 * time.Second))
 	r.NotFound(notFoundHandler)
 
-	// Routes
-	r.Get("/", controllers.StaticHandler(
-		views.Must(views.ParseFS(templates.FS, "layout.gohtml", "home.gohtml")),
-	))
+	// Public routes
+	r.Get("/", articlesHtml.Home)
 	r.Get("/a/{slug}", articlesHtml.Single)
-	r.Get("/articles/new", articlesHtml.CreateArticle)
-	r.Post("/articles", articlesHtml.CreateArticle)
-	r.Get("/trending", articlesHtml.Trending)
+	r.Get("/contact", controllers.StaticHandler("contact.gohtml"))
+
+	// Restricted routes
 	r.Mount("/api/articles", apiRoutes(articlesJson))
+	r.Mount("/admin", adminRoutes(articlesHtml))
 
 	fmt.Println("Starting server on port 3000")
 	err = http.ListenAndServe(":3000", r)
 	if err != nil {
 		fmt.Println(err)
 	}
+}
+
+func adminRoutes(c controllers.ArticlesHtml) http.Handler {
+	r := chi.NewRouter()
+	// TODO restrict to admin users
+	r.Get("/articles/new", c.CreateArticle)
+	r.Post("/articles", c.CreateArticle)
+	return r
 }
 
 func apiRoutes(c controllers.ArticlesJson) http.Handler {

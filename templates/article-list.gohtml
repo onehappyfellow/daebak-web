@@ -2,7 +2,9 @@
     <h1>{{ .Title }}</h1>
     {{ range .Articles }}
         <div class="art">
+            <a href="/a/{{ .Slug }}">
             {{ .Headline }}
+            </a>
         </div>
     {{ end }}
 {{end}}
