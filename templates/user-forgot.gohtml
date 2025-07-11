@@ -1,0 +1,8 @@
+{{define "page"}}
+<h2>Forgot Password</h2>
+{{if .Sent}}<div>Password reset link sent!</div>{{end}}
+<form method="POST">
+	<input type="email" name="email" required placeholder="Email" autocomplete="email"/>
+	<button type="submit">Send Reset Link</button>
+</form>
+{{end}}

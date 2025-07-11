@@ -28,6 +28,14 @@ func main() {
 	articleService := &models.ArticleService{
 		DB: db,
 	}
+	userService := &models.UserService{
+		DB: db,
+	}
+
+	// Set up middleware
+	umw := controllers.UserMiddleware{
+		UserService: userService,
+	}
 
 	// controllers
 	articlesJson := controllers.ArticlesJson{
@@ -45,6 +53,21 @@ func main() {
 	articlesHtml.Templates.Form = views.Must(views.ParseFS(
 		templates.FS, "layout.gohtml", "article-form.gohtml",
 	))
+	usersHtml := controllers.UsersHtml{
+		UserService: userService,
+	}
+	usersHtml.Templates.Register = views.Must(views.ParseFS(
+		templates.FS, "layout.gohtml", "user-register.gohtml",
+	))
+	usersHtml.Templates.Login = views.Must(views.ParseFS(
+		templates.FS, "layout.gohtml", "user-login.gohtml",
+	))
+	usersHtml.Templates.Forgot = views.Must(views.ParseFS(
+		templates.FS, "layout.gohtml", "user-forgot.gohtml",
+	))
+	usersHtml.Templates.Reset = views.Must(views.ParseFS(
+		templates.FS, "layout.gohtml", "user-reset.gohtml",
+	))
 
 	// setup router
 	r := chi.NewRouter()
@@ -55,12 +78,26 @@ func main() {
 	// r.Use(middleware.URLFormat)
 	// r.Use(middleware.Recoverer)
 	// r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(umw.SetUser)
 	r.NotFound(notFoundHandler)
 
 	// Public routes
 	r.Get("/", articlesHtml.Home)
 	r.Get("/a/{slug}", articlesHtml.Single)
 	r.Get("/contact", controllers.StaticHandler("contact.gohtml"))
+	r.Get("/users/register", usersHtml.Register)
+	r.Post("/users/register", usersHtml.Register)
+	r.Get("/users/login", usersHtml.Login)
+	r.Post("/users/login", usersHtml.Login)
+	r.Get("/users/logout", usersHtml.Logout)
+	r.Get("/users/forgot", usersHtml.Forgot)
+	r.Post("/users/forgot", usersHtml.Forgot)
+	r.Get("/users/reset", usersHtml.Reset)
+	r.Post("/users/reset", usersHtml.Reset)
+	r.Route("/users/me", func(r chi.Router) {
+		r.Use(umw.RequireUser)
+		r.Get("/", usersHtml.CurrentUser)
+	})
 
 	// Restricted routes
 	r.Mount("/api/articles", apiRoutes(articlesJson))

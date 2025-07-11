@@ -1,0 +1,8 @@
+{{define "page"}}
+<h2>Reset Password</h2>
+{{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+<form method="POST">
+	<input type="password" name="password" required placeholder="New Password" />
+	<button type="submit">Reset Password</button>
+</form>
+{{end}}

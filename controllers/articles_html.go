@@ -27,7 +27,11 @@ func (c ArticlesHtml) Single(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Article not found", http.StatusNotFound)
 		return
 	}
-	c.Templates.Single.Execute(w, r, article)
+	var data struct {
+		Article models.Article
+	}
+	data.Article = *article
+	c.Templates.Single.Execute(w, r, data)
 }
 
 func (c ArticlesHtml) Home(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +51,6 @@ func (c ArticlesHtml) Home(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c ArticlesHtml) Trending(w http.ResponseWriter, r *http.Request) {
-
 	page, err := c.ArticleService.GetAllArticles(1, 10)
 	if err != nil {
 		http.Error(w, "Page not found", http.StatusNotFound)
@@ -94,6 +97,10 @@ func (c ArticlesHtml) CreateArticle(w http.ResponseWriter, r *http.Request) {
 		article.Date = time.Now()
 	}
 
-	c.Templates.Form.Execute(w, r, article)
+	var data struct {
+		models.Article
+	}
+	data.Article = article
+	c.Templates.Form.Execute(w, r, data)
 	// after this, kick off go routine that will save changes on its completion
 }

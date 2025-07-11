@@ -30,6 +30,15 @@
             <div class="flex-grow">
                 <a href="/contact" class="px-8">contact</a>
             </div>
+            <div style="float:right;">
+                {{if currentUser}}
+                    <span>{{currentUser.Email}}</span>
+                    <a href="/users/logout">Logout</a>
+                {{else}}
+                    <a href="/users/register">Signup</a>
+                    <a href="/users/login">Login</a>
+                {{end}}
+            </div>
         </nav>
     </header>
     <div class="py-4 px-8">

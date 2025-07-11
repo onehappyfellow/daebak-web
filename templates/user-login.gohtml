@@ -1,0 +1,9 @@
+{{define "page"}}
+<h2>Login</h2>
+{{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+<form method="POST">
+	<input type="email" name="email" required placeholder="Email" autocomplete="email"/>
+	<input type="password" name="password" required placeholder="Password" />
+	<button type="submit">Login</button>
+</form>
+{{end}}
