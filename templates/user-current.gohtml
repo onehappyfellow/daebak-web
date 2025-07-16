@@ -1,0 +1,36 @@
+{{define "page"}}
+<h1>User Info</h1>
+<ul>
+    <li><b>Email:</b> {{.User.Email}}</li>
+    <li><b>Created:</b> {{.User.CreatedAt}}</li>
+</ul>
+
+<h2>Access Tokens</h2>
+{{if .Tokens}}
+    <ul>
+    {{range .Tokens}}
+        <li>
+            <b>Name:</b> {{.Name}}<br>
+            <b>Token:</b> {{.UUID}}<br>
+            <b>Last Used:</b> {{if .LastUsed}}{{.LastUsed}}{{else}}Never{{end}}
+            <form method="post" action="/users/me/tokens/delete" style="display:inline">
+                <input type="hidden" name="uuid" value="{{.UUID}}">
+                <button type="submit" onclick="return confirm('Delete this token?')">Delete</button>
+            </form>
+        </li>
+    {{end}}
+    </ul>
+{{else}}
+    <p>No tokens found.</p>
+{{end}}
+
+<h3>Create New Token</h3>
+{{if .Error}}
+    <div style="color:red">{{.Error}}</div>
+{{end}}
+<form method="post" action="/users/me/tokens">
+    <label for="name">Token Name:</label>
+    <input type="text" id="name" name="name" required>
+    <button type="submit">Create Token</button>
+</form>
+{{end}}

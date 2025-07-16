@@ -22,8 +22,10 @@ type UsersHtml struct {
 		Login    views.Template
 		Forgot   views.Template
 		Reset    views.Template
+		Current  views.Template
 	}
-	UserService *models.UserService
+	UserService  *models.UserService
+	TokenService *models.TokenService
 }
 
 func (c UsersHtml) Register(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +111,52 @@ func (u UsersHtml) CurrentUser(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/users/login", http.StatusFound)
 		return
 	}
-	fmt.Fprintf(w, "Current user: %s\n", user.Email)
+
+	var tokens []models.Token
+	var err error
+	if u.TokenService != nil {
+		tokens, err = u.TokenService.ListByUserID(user.ID)
+		if err != nil {
+			tokens = nil
+		}
+	}
+
+	var data struct {
+		User   *models.User
+		Tokens []models.Token
+		Error  string
+	}
+
+	data.User = user
+	data.Tokens = tokens
+
+	if r.Method == http.MethodPost {
+		name := r.FormValue("name")
+		if name != "" && u.TokenService != nil {
+			_, err := u.TokenService.Create(user.ID, name)
+			if err != nil {
+				data.Error = "Failed to create token"
+			} else {
+				http.Redirect(w, r, "/users/me", http.StatusSeeOther)
+				return
+			}
+		}
+	}
+
+	u.Templates.Current.Execute(w, r, data)
+}
+
+func (u UsersHtml) DeleteToken(w http.ResponseWriter, r *http.Request) {
+	user := context.User(r.Context())
+	if user == nil {
+		http.Redirect(w, r, "/users/login", http.StatusFound)
+		return
+	}
+	tokenUUID := r.FormValue("uuid")
+	if tokenUUID != "" && u.TokenService != nil {
+		_ = u.TokenService.Delete(user.ID, tokenUUID)
+	}
+	http.Redirect(w, r, "/users/me", http.StatusSeeOther)
 }
 
 // --- Session helpers ---
@@ -164,28 +211,46 @@ func signSession(email string) string {
 }
 
 type UserMiddleware struct {
-	UserService *models.UserService
+	UserService  *models.UserService
+	TokenService *models.TokenService
 }
 
 func (umw UserMiddleware) SetUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		email := getSessionEmail(r)
-		if email == "" {
-			// No session cookie found, proceed without setting a user.
-			next.ServeHTTP(w, r)
-			return
+		var user *models.User
+		var err error
+
+		if email != "" {
+			user, err = umw.UserService.GetByEmail(email)
+			if err == nil && user != nil {
+				ctx := r.Context()
+				ctx = context.WithUser(ctx, user)
+				r = r.WithContext(ctx)
+				next.ServeHTTP(w, r)
+				return
+			}
 		}
-		// If we have an email, try to lookup the user with that email.
-		user, err := umw.UserService.GetByEmail(email)
-		if err != nil {
-			// User not found or some other error, proceed without setting a user.
-			next.ServeHTTP(w, r)
-			return
+
+		// Check for token in Authorization header: "Bearer <uuid>"
+		authHeader := r.Header.Get("Authorization")
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+			tokenStr = strings.TrimSpace(tokenStr)
+			userID, err := umw.TokenService.GetUserId(tokenStr)
+			if err == nil && userID > 0 {
+				user, err = umw.UserService.GetByID(userID)
+				if err == nil && user != nil {
+					ctx := r.Context()
+					ctx = context.WithUser(ctx, user)
+					r = r.WithContext(ctx)
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
 		}
-		// If we get to this point, we have a user that we can store in the context!
-		ctx := r.Context()
-		ctx = context.WithUser(ctx, user)
-		r = r.WithContext(ctx)
+
+		// No session or valid token, proceed without setting a user.
 		next.ServeHTTP(w, r)
 	})
 }

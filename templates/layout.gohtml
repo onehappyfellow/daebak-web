@@ -32,7 +32,7 @@
             </div>
             <div style="float:right;">
                 {{if currentUser}}
-                    <span>{{currentUser.Email}}</span>
+                    <a href="/users/me">{{currentUser.Email}}</a>
                     <a href="/users/logout">Logout</a>
                 {{else}}
                     <a href="/users/register">Signup</a>

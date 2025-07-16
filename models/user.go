@@ -105,3 +105,14 @@ func (s *UserService) GetByEmail(email string) (*User, error) {
 	}
 	return &u, nil
 }
+
+func (s *UserService) GetByID(id int) (*User, error) {
+	var u User
+	err := s.DB.QueryRow(`
+		SELECT id, email, password_hash, created_at FROM users WHERE id = $1;`,
+		id).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}

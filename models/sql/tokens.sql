@@ -1,0 +1,6 @@
+CREATE TABLE tokens (
+    uuid UUID PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    last_used TIMESTAMP WITH TIME ZONE
+);

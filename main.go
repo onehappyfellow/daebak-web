@@ -31,10 +31,14 @@ func main() {
 	userService := &models.UserService{
 		DB: db,
 	}
+	tokenService := &models.TokenService{
+		DB: db,
+	}
 
 	// Set up middleware
 	umw := controllers.UserMiddleware{
-		UserService: userService,
+		UserService:  userService,
+		TokenService: tokenService,
 	}
 
 	// controllers
@@ -54,7 +58,8 @@ func main() {
 		templates.FS, "layout.gohtml", "article-form.gohtml",
 	))
 	usersHtml := controllers.UsersHtml{
-		UserService: userService,
+		UserService:  userService,
+		TokenService: tokenService,
 	}
 	usersHtml.Templates.Register = views.Must(views.ParseFS(
 		templates.FS, "layout.gohtml", "user-register.gohtml",
@@ -67,6 +72,9 @@ func main() {
 	))
 	usersHtml.Templates.Reset = views.Must(views.ParseFS(
 		templates.FS, "layout.gohtml", "user-reset.gohtml",
+	))
+	usersHtml.Templates.Current = views.Must(views.ParseFS(
+		templates.FS, "layout.gohtml", "user-current.gohtml",
 	))
 
 	// setup router
@@ -97,6 +105,8 @@ func main() {
 	r.Route("/users/me", func(r chi.Router) {
 		r.Use(umw.RequireUser)
 		r.Get("/", usersHtml.CurrentUser)
+		r.Post("/tokens", usersHtml.CurrentUser)
+		r.Post("/tokens/delete", usersHtml.DeleteToken)
 	})
 
 	// Restricted routes
