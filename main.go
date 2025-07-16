@@ -25,15 +25,10 @@ func main() {
 	defer db.Close()
 
 	// setup services
-	articleService := &models.ArticleService{
-		DB: db,
-	}
-	userService := &models.UserService{
-		DB: db,
-	}
-	tokenService := &models.TokenService{
-		DB: db,
-	}
+	articleService := &models.ArticleService{DB: db}
+	userService := &models.UserService{DB: db}
+	tokenService := &models.TokenService{DB: db}
+	vocabularyService := &models.VocabularyService{DB: db}
 
 	// Set up middleware
 	umw := controllers.UserMiddleware{
@@ -45,6 +40,9 @@ func main() {
 	articlesJson := controllers.ArticlesJson{
 		ArticleService: articleService,
 	}
+	vocabularyJson := controllers.VocabularyJson{
+		VocabularyService: vocabularyService,
+	}
 	articlesHtml := controllers.ArticlesHtml{
 		ArticleService: articleService,
 	}
@@ -54,7 +52,11 @@ func main() {
 	articlesHtml.Templates.List = views.Must(views.ParseFS(
 		templates.FS, "layout.gohtml", "article-list.gohtml",
 	))
-	articlesHtml.Templates.Form = views.Must(views.ParseFS(
+	adminHtml := controllers.AdminHtml{
+		ArticleService:    articleService,
+		VocabularyService: vocabularyService,
+	}
+	adminHtml.Templates.Form = views.Must(views.ParseFS(
 		templates.FS, "layout.gohtml", "article-form.gohtml",
 	))
 	usersHtml := controllers.UsersHtml{
@@ -111,7 +113,8 @@ func main() {
 
 	// Restricted routes
 	r.Mount("/api/articles", apiRoutes(articlesJson))
-	r.Mount("/admin", adminRoutes(articlesHtml))
+	r.Mount("/api/vocabulary", vocabularyApiRoutes(vocabularyJson))
+	r.Mount("/admin", adminRoutes(adminHtml))
 
 	fmt.Println("Starting server on port 3000")
 	err = http.ListenAndServe(":3000", r)
@@ -120,11 +123,22 @@ func main() {
 	}
 }
 
-func adminRoutes(c controllers.ArticlesHtml) http.Handler {
+func vocabularyApiRoutes(c controllers.VocabularyJson) http.Handler {
+	r := chi.NewRouter()
+	r.Get("/", c.List)
+	r.Post("/", c.Create)
+	r.Put("/{id}", c.Update)
+	r.Delete("/{id}", c.Delete)
+	return r
+}
+
+func adminRoutes(c controllers.AdminHtml) http.Handler {
 	r := chi.NewRouter()
 	// TODO restrict to admin users
 	r.Get("/articles/new", c.CreateArticle)
 	r.Post("/articles", c.CreateArticle)
+	r.Get("/articles/{id}", c.EditArticle)
+	r.Post("/articles/{id}", c.EditArticle)
 	return r
 }
 

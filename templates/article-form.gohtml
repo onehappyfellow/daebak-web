@@ -1,6 +1,51 @@
 {{define "page"}}
     <h1>{{ if not .Content }}Create{{ else }}Edit{{ end }} an Article</h1>
-    <form method="POST" action="/articles{{ if .ID }}/{{ .ID }}{{ end }}">
+    <form method="POST" action="/admin/articles{{ if .ID }}/{{ .ID }}{{ end }}">
+        <div>
+            <label for="vocabulary">Vocabulary:</label>
+            <div id="vocab-list">
+                {{- if .Vocabulary }}
+                    {{- range .Vocabulary }}
+                        <div>{{ .Word }}</div>
+                        <input type="hidden" name="vocabulary" value="{{ .ID }}">
+                    {{- end }}
+                {{- end }}
+            </div>
+            <div id="vocab-add">
+                <input type="text" id="vocab-word" placeholder="Add new word">
+                <button type="button" id="add-vocab-btn">Add</button>
+            </div>
+        </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('add-vocab-btn').onclick = function() {
+            const word = document.getElementById('vocab-word').value.trim();
+            if (!word) return;
+            fetch('/api/vocabulary', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ word })
+            })
+            .then(res => res.json())
+            .then(vocab => {
+                addVocabToList(vocab);
+                document.getElementById('vocab-word').value = '';
+            });
+        };
+        function addVocabToList(vocab) {
+            const container = document.getElementById('vocab-list');
+            const div = document.createElement('div');
+            div.textContent = vocab.word;
+            container.appendChild(div);
+            // Add hidden input for vocab id, using name="vocabulary"
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'vocabulary';
+            input.value = vocab.id;
+            container.appendChild(input);
+        }
+    });
+    </script>
         <div>
             <label for="headline">Headline:</label>
             <input 
