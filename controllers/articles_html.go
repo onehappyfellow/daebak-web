@@ -17,9 +17,8 @@ type ArticlesHtml struct {
 }
 
 func (c ArticlesHtml) Single(w http.ResponseWriter, r *http.Request) {
-	slug := chi.URLParam(r, "slug")
-	article, err := c.ArticleService.GetArticleBySlug(slug)
-
+	uuid := chi.URLParam(r, "slug")
+	article, err := c.ArticleService.GetArticleByUUID(uuid)
 	if err != nil {
 		http.Error(w, "Article not found", http.StatusNotFound)
 		return

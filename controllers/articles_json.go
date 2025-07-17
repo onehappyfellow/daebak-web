@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/onehappyfellow/daebak-web/models"
-	"github.com/onehappyfellow/daebak-web/util"
 )
 
 type ArticlesJson struct {
@@ -66,15 +65,13 @@ func (c ArticlesJson) GetArticle(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(article)
 }
 
-func (c ArticlesJson) GetArticleBySlug(w http.ResponseWriter, r *http.Request) {
-	slug := chi.URLParam(r, "slug")
-	article, err := c.ArticleService.GetArticleBySlug(slug)
-
+func (c ArticlesJson) GetArticleByUUID(w http.ResponseWriter, r *http.Request) {
+	uuid := chi.URLParam(r, "slug")
+	article, err := c.ArticleService.GetArticleByUUID(uuid)
 	if err != nil {
 		http.Error(w, "Article not found", http.StatusNotFound)
 		return
 	}
-
 	json.NewEncoder(w).Encode(article)
 }
 
@@ -87,7 +84,7 @@ func (c ArticlesJson) UpdateArticle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	article.ID = int(id)
-	article.Slug, _ = util.RandomString(models.SlugLength)
+
 
 	if err := c.ArticleService.UpdateArticle(article); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

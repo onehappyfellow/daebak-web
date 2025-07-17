@@ -127,6 +127,7 @@ func vocabularyApiRoutes(c controllers.VocabularyJson) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/", c.List)
 	r.Post("/", c.Create)
+	r.Post("/get-or-create", c.GetOrCreate)
 	r.Put("/{id}", c.Update)
 	r.Delete("/{id}", c.Delete)
 	return r
@@ -145,7 +146,6 @@ func apiRoutes(c controllers.ArticlesJson) http.Handler {
 	r.Get("/", c.GetAllArticles)
 	r.Post("/", c.CreateArticle)
 	r.Get("/{id}", c.GetArticle)
-	r.Get("/slug/{slug}", c.GetArticleBySlug)
 	r.Put("/{id}", c.UpdateArticle)
 	r.Delete("/{id}", c.DeleteArticle)
 	return r

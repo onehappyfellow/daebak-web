@@ -1,9 +1,18 @@
-CREATE TABLE articles(
+CREATE TABLE articles (
     id SERIAL PRIMARY KEY,
-    slug TEXT UNIQUE NOT NULL,
-    headline TEXT,
-    content TEXT,
-    date TIMESTAMPTZ DEFAULT Now(),
+    uuid TEXT UNIQUE NOT NULL,
     published BOOLEAN DEFAULT false,
-    author TEXT   
+    source_published TIMESTAMP,
+    source_accessed TIMESTAMP DEFAULT now(),
+    source_url TEXT,
+    source_publication TEXT,
+    source_author TEXT,
+    headline TEXT NOT NULL,
+    headline_en TEXT,
+    content JSONB,
+    summary TEXT,
+    context TEXT,
+    topik_level INT,
+    topik_level_explanation TEXT,
+    comprehension_questions TEXT
 );

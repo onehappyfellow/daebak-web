@@ -7,6 +7,9 @@
                 {{- if .Vocabulary }}
                     {{- range .Vocabulary }}
                         <div>{{ .Word }}</div>
+                        <div>{{ .Definition }}</div>
+                        <div>{{ .Examples }}</div>
+                        <div>{{ .Translation }}</div>
                         <input type="hidden" name="vocabulary" value="{{ .ID }}">
                     {{- end }}
                 {{- end }}
@@ -21,7 +24,7 @@
         document.getElementById('add-vocab-btn').onclick = function() {
             const word = document.getElementById('vocab-word').value.trim();
             if (!word) return;
-            fetch('/api/vocabulary', {
+            fetch('/api/vocabulary/get-or-create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ word })
@@ -49,19 +52,26 @@
         document.getElementById('article-form').onsubmit = async function(e) {
             e.preventDefault();
             const form = e.target;
-            // Convert date to RFC3339 format (YYYY-MM-DDT00:00:00Z)
-            let dateValue = form.date.value;
-            let dateRFC3339 = "";
-            if (dateValue) {
-                // Use UTC midnight for the date
-                dateRFC3339 = new Date(dateValue + 'T00:00:00Z').toISOString();
+            // Convert date fields to RFC3339 format
+            function toRFC3339(dateStr) {
+                if (!dateStr) return null;
+                return new Date(dateStr + 'T00:00:00Z').toISOString();
             }
-            const data = {
+            let data = {
                 headline: form.headline.value,
+                headline_en: form.headline_en.value,
                 content: form.content.value,
-                date: dateRFC3339,
+                summary: form.summary.value,
+                context: form.context.value,
+                topik_level: form.topik_level.value ? parseInt(form.topik_level.value) : null,
+                topik_level_explanation: form.topik_level_explanation.value,
+                comprehension_questions: form.comprehension_questions.value,
                 published: form.published.checked,
-                author: form.author.value,
+                source_published: toRFC3339(form.source_published.value),
+                source_accessed: toRFC3339(form.source_accessed.value),
+                source_url: form.source_url.value,
+                source_publication: form.source_publication.value,
+                source_author: form.source_author.value,
                 vocabulary: Array.from(form.querySelectorAll('input[name="vocabulary"]')).map(i => parseInt(i.value))
             };
             let url = '/api/articles';
@@ -78,12 +88,9 @@
                 });
                 if (!res.ok) throw new Error(await res.text());
                 alert('Article saved successfully!');
-                // Clear form if creating a new article (no .ID)
                 if (!form.dataset.id) {
                     form.reset();
-                    // Clear vocabulary list
-                    const vocabList = document.getElementById('vocab-list');
-                    vocabList.innerHTML = '';
+                    document.getElementById('vocab-list').innerHTML = '';
                 }
             } catch (err) {
                 alert('Error: ' + err.message);
@@ -102,6 +109,15 @@
             >
         </div>
         <div>
+            <label for="headline_en">Headline (English):</label>
+            <input 
+            type="text" 
+            id="headline_en" 
+            name="headline_en" 
+            value="{{ if .HeadlineEn }}{{ .HeadlineEn }}{{ end }}"
+            >
+        </div>
+        <div>
             <label for="content">Content:</label>
             <textarea 
             id="content" 
@@ -111,13 +127,91 @@
             >{{ if .Content }}{{ .Content }}{{ end }}</textarea>
         </div>
         <div>
-            <label for="date">Date:</label>
+            <label for="summary">Summary:</label>
+            <textarea 
+            id="summary" 
+            name="summary" 
+            rows="3"
+            >{{ if .Summary }}{{ .Summary }}{{ end }}</textarea>
+        </div>
+        <div>
+            <label for="context">Context:</label>
+            <textarea 
+            id="context" 
+            name="context" 
+            rows="2"
+            >{{ if .Context }}{{ .Context }}{{ end }}</textarea>
+        </div>
+        <div>
+            <label for="topik_level">TOPIK Level:</label>
+            <input 
+            type="number" 
+            id="topik_level" 
+            name="topik_level" 
+            min="1" max="6"
+            value="{{ if .TopikLevel }}{{ .TopikLevel }}{{ end }}"
+            >
+        </div>
+        <div>
+            <label for="topik_level_explanation">TOPIK Level Explanation:</label>
+            <input 
+            type="text" 
+            id="topik_level_explanation" 
+            name="topik_level_explanation" 
+            value="{{ if .TopikLevelExplanation }}{{ .TopikLevelExplanation }}{{ end }}"
+            >
+        </div>
+        <div>
+            <label for="comprehension_questions">Comprehension Questions:</label>
+            <textarea 
+            id="comprehension_questions" 
+            name="comprehension_questions" 
+            rows="3"
+            >{{ if .ComprehensionQuestions }}{{ .ComprehensionQuestions }}{{ end }}</textarea>
+        </div>
+        <div>
+            <label for="source_published">Source Published:</label>
             <input 
             type="date" 
-            id="date" 
-            name="date" 
-            value="{{ if .Date }}{{ .Date.Format "2006-01-02" }}{{ end }}"
-            required
+            id="source_published" 
+            name="source_published" 
+            value="{{ if .SourcePublished }}{{ .SourcePublished.Format "2006-01-02" }}{{ end }}"
+            >
+        </div>
+        <div>
+            <label for="source_accessed">Source Accessed:</label>
+            <input 
+            type="date" 
+            id="source_accessed" 
+            name="source_accessed" 
+            value="{{ if .SourceAccessed }}{{ .SourceAccessed.Format "2006-01-02" }}{{ end }}"
+            >
+        </div>
+        <div>
+            <label for="source_url">Source URL:</label>
+            <input 
+            type="url" 
+            id="source_url" 
+            name="source_url" 
+            value="{{ if .SourceURL }}{{ .SourceURL }}{{ end }}"
+            >
+        </div>
+        <div>
+            <label for="source_publication">Source Publication:</label>
+            <input 
+            type="text" 
+            id="source_publication" 
+            name="source_publication" 
+            value="{{ if .SourcePublication }}{{ .SourcePublication }}{{ end }}"
+            >
+        </div>
+        <div>
+            <label for="source_author">Source Author:</label>
+            <input 
+            type="text" 
+            id="source_author" 
+            name="source_author" 
+            value="{{ if .SourceAuthor }}{{ .SourceAuthor }}{{ end }}"
             >
         </div>
         <div>
@@ -127,16 +221,6 @@
             id="published" 
             name="published"
             {{ if .Published }}checked{{ end }}
-            >
-        </div>
-        <div>
-            <label for="author">Author:</label>
-            <input 
-            type="text" 
-            id="author" 
-            name="author" 
-            value="{{ if .Author }}{{ .Author }}{{ end }}"
-            required
             >
         </div>
         <button type="submit">

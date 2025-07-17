@@ -6,11 +6,11 @@ import (
 )
 
 type Vocabulary struct {
-	ID          int            `json:"id"`
-	Word        string         `json:"word"`
-	Definition  sql.NullString `json:"definition"`
-	Examples    sql.NullString `json:"examples"`
-	Translation sql.NullString `json:"translation_en"`
+	ID          int     `json:"id"`
+	Word        string  `json:"word"`
+	Definition  *string `json:"definition"`
+	Examples    *string `json:"examples"`
+	Translation *string `json:"translation_en"`
 }
 
 type VocabularyPaginatedResponse struct {
@@ -47,9 +47,8 @@ func (s *VocabularyService) GetOrCreateVocabulary(word string) (*Vocabulary, err
 	}
 	// Not found, create it
 	v.Word = word
-	v.Definition = sql.NullString{String: "incomplete: todo call tool", Valid: true}
-	v.Examples = sql.NullString{Valid: false}
-	v.Translation = sql.NullString{Valid: false}
+	deff := "incomplete: todo call tool"
+	v.Definition = &deff
 	createErr := s.DB.QueryRow(`INSERT INTO vocabulary (word, definition) VALUES ($1, $2) RETURNING id`, v.Word, v.Definition).Scan(&v.ID)
 	if createErr != nil {
 		return nil, createErr

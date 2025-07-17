@@ -46,6 +46,23 @@ func (c VocabularyJson) Create(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(vocab)
 }
 
+func (c VocabularyJson) GetOrCreate(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Word string `json:"word"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	vocab, err := c.VocabularyService.GetOrCreateVocabulary(req.Word)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(vocab)
+}
+
 func (c VocabularyJson) Update(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
 	var vocab models.Vocabulary
