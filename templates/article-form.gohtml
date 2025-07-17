@@ -1,6 +1,6 @@
 {{define "page"}}
     <h1>{{ if not .Content }}Create{{ else }}Edit{{ end }} an Article</h1>
-    <form method="POST" action="/admin/articles{{ if .ID }}/{{ .ID }}{{ end }}">
+    <form id="article-form">
         <div>
             <label for="vocabulary">Vocabulary:</label>
             <div id="vocab-list">
@@ -44,6 +44,51 @@
             input.value = vocab.id;
             container.appendChild(input);
         }
+
+        // Handle form submit via JS and send JSON to /api/articles or /api/articles/:id
+        document.getElementById('article-form').onsubmit = async function(e) {
+            e.preventDefault();
+            const form = e.target;
+            // Convert date to RFC3339 format (YYYY-MM-DDT00:00:00Z)
+            let dateValue = form.date.value;
+            let dateRFC3339 = "";
+            if (dateValue) {
+                // Use UTC midnight for the date
+                dateRFC3339 = new Date(dateValue + 'T00:00:00Z').toISOString();
+            }
+            const data = {
+                headline: form.headline.value,
+                content: form.content.value,
+                date: dateRFC3339,
+                published: form.published.checked,
+                author: form.author.value,
+                vocabulary: Array.from(form.querySelectorAll('input[name="vocabulary"]')).map(i => parseInt(i.value))
+            };
+            let url = '/api/articles';
+            let method = 'POST';
+            if (form.dataset.id) {
+                url = `/api/articles/${form.dataset.id}`;
+                method = 'PUT';
+            }
+            try {
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!res.ok) throw new Error(await res.text());
+                alert('Article saved successfully!');
+                // Clear form if creating a new article (no .ID)
+                if (!form.dataset.id) {
+                    form.reset();
+                    // Clear vocabulary list
+                    const vocabList = document.getElementById('vocab-list');
+                    vocabList.innerHTML = '';
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        };
     });
     </script>
         <div>
@@ -97,5 +142,12 @@
         <button type="submit">
             {{ if .ID }}Update{{ else }}Create{{ end }}
         </button>
+        <script>
+        // Set form data-id if editing
+        document.addEventListener('DOMContentLoaded', function() {
+            var form = document.getElementById('article-form');
+            {{ if .ID }}form.dataset.id = '{{ .ID }}';{{ end }}
+        });
+        </script>
     </form>
 {{end}}

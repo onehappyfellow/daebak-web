@@ -135,10 +135,8 @@ func vocabularyApiRoutes(c controllers.VocabularyJson) http.Handler {
 func adminRoutes(c controllers.AdminHtml) http.Handler {
 	r := chi.NewRouter()
 	// TODO restrict to admin users
-	r.Get("/articles/new", c.CreateArticle)
-	r.Post("/articles", c.CreateArticle)
-	r.Get("/articles/{id}", c.EditArticle)
-	r.Post("/articles/{id}", c.EditArticle)
+	r.Get("/articles/new", c.NewArticleForm)
+	r.Get("/articles/{id}", c.EditArticleForm)
 	return r
 }
 
