@@ -2,7 +2,7 @@
     <h1>{{ .Title }}</h1>
     {{ range .Articles }}
         <div class="art">
-            <a href="/a/{{ .Slug }}">
+            <a href="/a/{{ .UUID }}">
             {{ .Headline }}
             </a>
         </div>

@@ -1,4 +1,36 @@
 {{define "page"}}
-    <h1>{{ .Headline }}</h1>
-    <div>{{ .Content }}</div>
+    <div class="dump">{{ .Article }}</div>
+    <main class="layout-main">
+        <div class="article-single__container">
+        {{ with .Article }}
+            <div class="article-single__content">
+                <h1>{{ .Headline }}</h1>
+                {{ if .HeadlineEn }}<h2>{{ .HeadlineEn }}</h2>{{ end }}
+                <div class="article-meta">
+                    <div class="article-meta__row">
+                        <span class="label">Author:</span><span class="value">{{ .SourceAuthor }}</span>
+                    </div>
+                    <div class="article-meta__row">
+                        <span class="label">Published:</span>{{ if .SourcePublished }}<span class="value">{{ formatDate .SourcePublished }}</span>{{ end }}
+                    </div>
+                    <div class="article-meta__row">
+                        <span class="label">Source:</span><span class="value">
+                            <a href="{{ .SourceURL }}" target="_blank" rel="noopener noreferrer">{{ .SourcePublication }}</a>
+                        </span>
+                    </div>
+                    <div class="article-meta__row">
+                        <span class="label">Tags:</span>
+                        <div class="article-meta__tags value">
+                            {{ range .Tags }}<span class="tag">{{ . }}</span>{{end}}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-blocks">{{ .Content }}</div>
+
+
+            </div>
+        {{ end }}
+        </div>
+    </main>
 {{end}}

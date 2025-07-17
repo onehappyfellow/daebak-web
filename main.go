@@ -29,6 +29,9 @@ func main() {
 	userService := &models.UserService{DB: db}
 	tokenService := &models.TokenService{DB: db}
 	vocabularyService := &models.VocabularyService{DB: db}
+	// Instantiate new services for grammar, tags, and vocabulary (not yet used)
+	_ = &models.GrammarService{DB: db}
+	_ = &models.TagService{DB: db}
 
 	// Set up middleware
 	umw := controllers.UserMiddleware{

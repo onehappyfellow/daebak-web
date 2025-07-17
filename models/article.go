@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"log"
 	"math"
 	"time"
 
@@ -11,22 +12,25 @@ import (
 const SlugLength = 8
 
 type Article struct {
-	ID                     int        `json:"id"`
-	UUID                   string     `json:"uuid"`
-	Published              bool       `json:"published"`
-	SourcePublished        *time.Time `json:"source_published"`
-	SourceAccessed         time.Time  `json:"source_accessed"`
-	SourceURL              *string    `json:"source_url"`
-	SourcePublication      *string    `json:"source_publication"`
-	SourceAuthor           *string    `json:"source_author"`
-	Headline               string     `json:"headline"`
-	HeadlineEn             *string    `json:"headline_en"`
-	Content                *string    `json:"content"`
-	Summary                *string    `json:"summary"`
-	Context                *string    `json:"context"`
-	TopikLevel             *int64     `json:"topik_level"`
-	TopikLevelExplanation  *string    `json:"topik_level_explanation"`
-	ComprehensionQuestions *string    `json:"comprehension_questions"`
+	ID                     int          `json:"id"`
+	UUID                   string       `json:"uuid"`
+	Published              bool         `json:"published"`
+	SourcePublished        *time.Time   `json:"source_published"`
+	SourceAccessed         time.Time    `json:"source_accessed"`
+	SourceURL              *string      `json:"source_url"`
+	SourcePublication      *string      `json:"source_publication"`
+	SourceAuthor           *string      `json:"source_author"`
+	Headline               string       `json:"headline"`
+	HeadlineEn             *string      `json:"headline_en"`
+	Content                *string      `json:"content"`
+	Summary                *string      `json:"summary"`
+	Context                *string      `json:"context"`
+	TopikLevel             *int64       `json:"topik_level"`
+	TopikLevelExplanation  *string      `json:"topik_level_explanation"`
+	ComprehensionQuestions *string      `json:"comprehension_questions"`
+	Tags                   []string     `json:"tags,omitempty"`
+	Grammar                []Grammar    `json:"grammar,omitempty"`
+	Vocabulary             []Vocabulary `json:"vocabulary,omitempty"`
 }
 
 type PaginatedResponse struct {
@@ -51,7 +55,6 @@ func (s *ArticleService) GetArticle(id int) (*Article, error) {
 	return &a, err
 }
 
-// Example: get by UUID
 func (s *ArticleService) GetArticleByUUID(uuid string) (*Article, error) {
 	var a Article
 	err := s.DB.QueryRow(`
@@ -59,6 +62,76 @@ func (s *ArticleService) GetArticleByUUID(uuid string) (*Article, error) {
 			   FROM articles WHERE uuid = $1;`,
 		uuid).Scan(
 		&a.ID, &a.UUID, &a.Published, &a.SourcePublished, &a.SourceAccessed, &a.SourceURL, &a.SourcePublication, &a.SourceAuthor, &a.Headline, &a.HeadlineEn, &a.Content, &a.Summary, &a.Context, &a.TopikLevel, &a.TopikLevelExplanation, &a.ComprehensionQuestions)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch associated tags
+	tags := make([]string, 0)
+	rows, err := s.DB.Query(`SELECT t.name FROM tags AS t
+				JOIN article_tags AS at ON t.id = at.tag_id
+				WHERE at.article_id = $1;`, a.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var tag string
+		if err := rows.Scan(&tag); err != nil {
+			panic(err)
+		}
+		tags = append(tags, tag)
+	}
+	if err := rows.Err(); err != nil {
+		panic(err)
+	}
+	a.Tags = tags
+
+	// Fetch associated vocabulary
+	vocabulary := make([]Vocabulary, 0)
+	rows, err = s.DB.Query(`SELECT v.id, v.word, v.definition, v.translation_en, v.examples FROM vocabulary AS v
+				JOIN article_vocabulary AS av ON v.id = av.vocabulary_id
+				WHERE av.article_id = $1;`, a.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var vocab Vocabulary
+		if err := rows.Scan(&vocab.ID, &vocab.Word, &vocab.Definition, &vocab.Translation, &vocab.Examples); err != nil {
+			panic(err)
+		}
+		vocabulary = append(vocabulary, vocab)
+	}
+	if err := rows.Err(); err != nil {
+		panic(err)
+	}
+	a.Vocabulary = vocabulary
+
+	// Fetch associated grammar points
+	grammar := make([]Grammar, 0)
+	rows, err = s.DB.Query(`SELECT r.id, r.title, r.explanation_short, r.examples FROM grammar AS r
+				JOIN article_grammar AS j ON r.id = j.grammar_id
+				WHERE j.article_id = $1;`, a.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var gram Grammar
+		if err := rows.Scan(&gram.ID, &gram.Title, &gram.ExplanationShort, &gram.Examples); err != nil {
+			panic(err)
+		}
+		grammar = append(grammar, gram)
+	}
+	if err := rows.Err(); err != nil {
+		panic(err)
+	}
+	a.Grammar = grammar
+
 	return &a, err
 }
 
