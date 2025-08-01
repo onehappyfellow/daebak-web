@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -98,6 +100,7 @@ func main() {
 	r.Get("/", articlesHtml.Home)
 	r.Get("/a/{slug}", articlesHtml.Single)
 	r.Get("/contact", controllers.StaticHandler("contact.gohtml"))
+	r.Handle("/images/*", http.StripPrefix("/images/", http.FileServer(http.Dir("images"))))
 	r.Get("/users/register", usersHtml.Register)
 	r.Post("/users/register", usersHtml.Register)
 	r.Get("/users/login", usersHtml.Login)
@@ -141,6 +144,7 @@ func adminRoutes(c controllers.AdminHtml) http.Handler {
 	// TODO restrict to admin users
 	r.Get("/articles/new", c.NewArticleForm)
 	r.Get("/articles/{id}", c.EditArticleForm)
+	r.Post("/images/upload", imageUploadHandler)
 	return r
 }
 
@@ -152,4 +156,59 @@ func apiRoutes(c controllers.ArticlesJson) http.Handler {
 	r.Put("/{id}", c.UpdateArticle)
 	r.Delete("/{id}", c.DeleteArticle)
 	return r
+}
+
+// imageUploadHandler handles image uploads for admin users
+func imageUploadHandler(w http.ResponseWriter, r *http.Request) {
+	// Limit upload size to 10MB
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+	err := r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		http.Error(w, "File too large or invalid form", http.StatusBadRequest)
+		return
+	}
+	file, handler, err := r.FormFile("image")
+	if err != nil {
+		http.Error(w, "Error retrieving the file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// Only allow certain file extensions (basic check)
+	allowed := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".gif": true}
+	ext := ""
+	if len(handler.Filename) > 0 {
+		for i := len(handler.Filename) - 1; i >= 0; i-- {
+			if handler.Filename[i] == '.' {
+				ext = handler.Filename[i:]
+				break
+			}
+		}
+	}
+	if !allowed[ext] {
+		http.Error(w, "Unsupported file type", http.StatusBadRequest)
+		return
+	}
+	// Save file to images directory
+	dst, err := os.OpenFile("images/"+handler.Filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		http.Error(w, "Unable to save the file", http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+	defer dst.Close()
+
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		http.Error(w, "Error reading file", http.StatusInternalServerError)
+		return
+	}
+	_, err = io.Copy(dst, file)
+	if err != nil {
+		http.Error(w, "Error saving file", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	fmt.Fprintf(w, "Image uploaded successfully as %s", handler.Filename)
 }
